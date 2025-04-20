@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Luna - Batch Image Inserter 
  * Description: Adds/removes an image to/from WooCommerce product galleries in batch, with manual/auto run, settings input, progress tracking, and animated UI.
- * Version: 2.0
+ * Version: 2.2
  * Author: Luna
  */
 
@@ -62,179 +62,146 @@ function image_inserter_page() {
     if ($running && $remaining > 0 && is_array($auto_settings)) {
         $message = process_batch($auto_settings);
     }
-    ?>
+?>
+<style>
+.luna-container {
+    max-width: 800px;
+    margin: 30px auto;
+    background: #fff;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    animation: fadeIn 0.5s ease-in-out;
+}
+@keyframes fadeIn {
+    from {opacity: 0; transform: translateY(20px);}
+    to {opacity: 1; transform: translateY(0);}
+}
+.settings-highlight {
+    background: #eaf6ff;
+    padding: 12px;
+    border-left: 5px solid #2271b1;
+    font-weight: bold;
+    border-radius: 6px;
+    margin: 10px 0;
+}
+.progress-bar {
+    background: #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+    height: 20px;
+    margin-bottom: 10px;
+}
+.progress-bar-fill {
+    background: linear-gradient(90deg, #2271b1, #46b450);
+    height: 100%;
+    width: <?= esc_attr($progress) ?>%;
+    transition: width 0.5s ease;
+    color: white;
+    text-align: center;
+    font-size: 13px;
+    line-height: 20px;
+}
+</style>
 
-    <style>
-        .luna-container {
-            max-width: 800px;
-            margin: 30px auto;
-            background: #fff;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
-            animation: fadeIn 0.5s ease-in-out;
-        }
-        @keyframes fadeIn {
-            from {opacity: 0; transform: translateY(20px);}
-            to {opacity: 1; transform: translateY(0);}
-        }
-        .luna-container h1, .luna-container h2 {
-            text-align: center;
-            color: #222;
-        }
-        .luna-container ul {
-            list-style: none;
-            padding: 0;
-        }
-        .luna-container li {
-            padding: 6px 0;
-            font-size: 15px;
-        }
-        .settings-highlight {
-            background: #eaf6ff;
-            padding: 12px;
-            border-left: 5px solid #2271b1;
-            font-size: 16px;
-            font-weight: bold;
-            color: #004f7c;
-            margin-top: 10px;
-            border-radius: 6px;
-        }
-        .form-table th {
-            width: 180px;
-        }
-        .form-table input[type="number"],
-        .form-table input[type="text"] {
-            padding: 6px;
-            border-radius: 5px;
-            border: 1px solid #ccc;
-            width: 100%;
-        }
-        .button {
-            padding: 8px 20px;
-            margin-right: 10px;
-            margin-top: 10px;
-        }
-        .notice-success {
-            background: #e6ffed;
-            border-left: 5px solid #46b450;
-        }
-        .log-box {
-            max-height: 200px;
-            overflow-y: auto;
-            background: #f9f9f9;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-        .progress-bar {
-            background: #e0e0e0;
-            border-radius: 10px;
-            overflow: hidden;
-            height: 20px;
-            margin-bottom: 10px;
-        }
-        .progress-bar-fill {
-            background: linear-gradient(90deg, #2271b1, #46b450);
-            height: 100%;
-            width: <?= esc_attr($progress) ?>%;
-            transition: width 0.5s ease;
-            color: white;
-            text-align: center;
-            font-size: 13px;
-            line-height: 20px;
-        }
-    </style>
+<div class="wrap luna-container">
+    <h1>🖼️ Luna - Batch Image Inserter</h1>
 
-    <div class="wrap luna-container">
-        <h1>🖼️ Luna - Batch Image Inserter</h1>
+    <h2>📊 Progress</h2>
+    <div class="progress-bar"><div class="progress-bar-fill"><?= esc_html($progress) ?>%</div></div>
+    <ul>
+        <li><strong>Total Products:</strong> <?= esc_html($total) ?></li>
+        <li><strong>Processed:</strong> <?= esc_html($offset) ?></li>
+        <li><strong>Remaining:</strong> <?= esc_html($remaining) ?></li>
+        <li><strong>Status:</strong> <?= $running ? '🟢 Running' : '🔴 Stopped' ?></li>
+        <li><strong>Started At:</strong> <?= $started_at ? date('Y-m-d H:i:s', $started_at) : 'N/A' ?></li>
+    </ul>
 
-        <h2>📊 Progress</h2>
-        <div class="progress-bar">
-            <div class="progress-bar-fill"><?= esc_html($progress) ?>%</div>
-        </div>
-        <ul>
-            <li><strong>Total Products:</strong> <?= esc_html($total) ?></li>
-            <li><strong>Processed:</strong> <?= esc_html($offset) ?></li>
-            <li><strong>Remaining:</strong> <?= esc_html($remaining) ?></li>
-            <li><strong>Status:</strong> <?= $running ? '🟢 Running' : '🔴 Stopped' ?></li>
-            <li><strong>Started At:</strong> <?= $started_at ? date('Y-m-d H:i:s', $started_at) : 'N/A' ?></li>
-        </ul>
-
-        <?php if ($running && is_array($auto_settings)): ?>
-            <div class="settings-highlight">
-                🔧 Current Settings → Mode: <?= esc_html($auto_settings['mode']) ?> |
-                Batch: <?= esc_html($auto_settings['batch_size']) ?> |
-                Order: <?= esc_html($auto_settings['order']) ?> |
-                Title: <?= esc_html($auto_settings['image_title']) ?>
-            </div>
-        <?php endif; ?>
-
-        <form method="post" id="form" style="margin-bottom:20px; margin-top: 30px;">
-            <?php wp_nonce_field('run_action_nonce'); ?>
-            <table class="form-table">
-                <tr>
-                    <th><label>Batch Size</label></th>
-                    <td><input type="number" name="batch_size" value="<?= esc_attr($last['batch_size'] ?? 100) ?>"></td>
-                </tr>
-                <tr>
-                    <th><label>Image Title</label></th>
-                    <td><input type="text" name="image_title" value="<?= esc_attr($last['image_title'] ?? '') ?>"></td>
-                </tr>
-                <tr>
-                    <th>Mode</th>
-                    <td>
-                        <label><input type="radio" name="mode" value="add" <?= (!isset($last['mode']) || $last['mode'] === 'add') ? 'checked' : '' ?>> Add</label>
-                        &nbsp;&nbsp;
-                        <label><input type="radio" name="mode" value="remove" <?= ($last['mode'] ?? '') === 'remove' ? 'checked' : '' ?>> Remove</label>
-                    </td>
-                </tr>
-                <tr>
-                    <th>Sort Order</th>
-                    <td>
-                        <label><input type="radio" name="order" value="ASC" <?= (!isset($last['order']) || $last['order'] === 'ASC') ? 'checked' : '' ?>> Oldest to Newest</label>
-                        &nbsp;&nbsp;
-                        <label><input type="radio" name="order" value="DESC" <?= ($last['order'] ?? '') === 'DESC' ? 'checked' : '' ?>> Newest to Oldest</label>
-                    </td>
-                </tr>
-            </table>
-            <p>
-                <input type="submit" name="run_once" class="button button-primary" value="▶️ Run Once">
-                <input type="submit" name="run_auto" class="button button-secondary" value="🔁 Start Auto Run Every 5s">
-            </p>
-        </form>
-
-        <form method="post" style="display:inline-block; margin-right:10px;">
-            <?php wp_nonce_field('stop_action_nonce'); ?>
-            <input type="submit" name="stop_action" class="button" value="⏹️ Stop Auto Run">
-        </form>
-
-        <form method="post" style="display:inline-block;">
-            <?php wp_nonce_field('reset_action_nonce'); ?>
-            <input type="submit" name="reset_action" class="button button-secondary" value="🔄 Reset Progress">
-        </form>
-
-        <?php if ($message): ?>
-            <div class="notice notice-success" style="margin-top:20px;"><p><?= esc_html($message) ?></p></div>
-        <?php endif; ?>
-
-        <?php if (!empty($log)): ?>
-            <h2>📜 Log</h2>
-            <div class="log-box">
-                <ul>
-                    <?php foreach ($log as $entry): ?>
-                        <li><?= esc_html($entry) ?></li>
-                    <?php endforeach; ?>
-                </ul>
-            </div>
-        <?php endif; ?>
+    <?php if ($running && is_array($auto_settings)): ?>
+    <div class="settings-highlight">
+        🔧 Current Settings → Mode: <?= esc_html($auto_settings['mode']) ?> |
+        Batch: <?= esc_html($auto_settings['batch_size']) ?> |
+        Order: <?= esc_html($auto_settings['order']) ?> |
+        Title: <?= esc_html($auto_settings['image_title']) ?> |
+        Position: <?= esc_html($auto_settings['insert_position']) ?> <?= $auto_settings['insert_position'] === 'custom' ? '(Index: ' . esc_html($auto_settings['custom_position']) . ')' : '' ?>
     </div>
+    <?php endif; ?>
 
-    <?php if ($running && $remaining > 0): ?>
-        <script>
-            setTimeout(() => document.getElementById("form").submit(), 5000);
-        </script>
-    <?php endif;
+    <form method="post" id="form">
+        <?php wp_nonce_field('run_action_nonce'); ?>
+        <table class="form-table">
+            <tr><th>Batch Size</th><td><input type="number" name="batch_size" value="<?= esc_attr($last['batch_size'] ?? 100) ?>"></td></tr>
+            <tr><th>Image Title</th><td><input type="text" name="image_title" value="<?= esc_attr($last['image_title'] ?? '') ?>"></td></tr>
+            <tr>
+                <th>Mode</th>
+                <td>
+                    <label><input type="radio" name="mode" value="add" <?= (!isset($last['mode']) || $last['mode'] === 'add') ? 'checked' : '' ?>> Add</label>
+                    <label><input type="radio" name="mode" value="remove" <?= ($last['mode'] ?? '') === 'remove' ? 'checked' : '' ?>> Remove</label>
+                </td>
+            </tr>
+            <tr id="insert_position_row">
+                <th>Insert Position</th>
+                <td>
+                    <select name="insert_position" onchange="document.getElementById('custom_position').style.display = (this.value === 'custom') ? 'inline-block' : 'none';">
+                        <option value="end" <?= ($last['insert_position'] ?? 'end') === 'end' ? 'selected' : '' ?>>End</option>
+                        <option value="start" <?= ($last['insert_position'] ?? '') === 'start' ? 'selected' : '' ?>>Start</option>
+                        <option value="custom" <?= ($last['insert_position'] ?? '') === 'custom' ? 'selected' : '' ?>>Custom</option>
+                    </select>
+                    <input type="number" name="custom_position" id="custom_position" placeholder="Index" value="<?= esc_attr($last['custom_position'] ?? '') ?>" style="<?= ($last['insert_position'] ?? '') === 'custom' ? '' : 'display:none;' ?>">
+                </td>
+            </tr>
+            <tr>
+                <th>Sort Order</th>
+                <td>
+                    <label><input type="radio" name="order" value="ASC" <?= (!isset($last['order']) || $last['order'] === 'ASC') ? 'checked' : '' ?>> ASC (Oldest to Newest)</label><br>
+                    <label><input type="radio" name="order" value="DESC" <?= ($last['order'] ?? '') === 'DESC' ? 'checked' : '' ?>> DESC (Newest to Oldest)</label>
+                </td>
+            </tr>
+        </table>
+        <p>
+            <input type="submit" name="run_once" class="button button-primary" value="▶️ Run Once">
+            <input type="submit" name="run_auto" class="button button-secondary" value="🔁 Start Auto Run Every 5s">
+        </p>
+    </form>
+
+    <form method="post" style="display:inline-block;">
+        <?php wp_nonce_field('stop_action_nonce'); ?>
+        <input type="submit" name="stop_action" class="button" value="⏹️ Stop Auto Run">
+    </form>
+
+    <form method="post" style="display:inline-block;">
+        <?php wp_nonce_field('reset_action_nonce'); ?>
+        <input type="submit" name="reset_action" class="button button-secondary" value="🔄 Reset Progress">
+    </form>
+
+    <?php if ($message): ?>
+        <div class="notice notice-success"><p><?= esc_html($message) ?></p></div>
+    <?php endif; ?>
+
+    <?php if (!empty($log)): ?>
+        <h2>📜 Log</h2>
+        <div class="log-box"><ul>
+            <?php foreach ($log as $entry): ?>
+                <li><?= esc_html($entry) ?></li>
+            <?php endforeach; ?>
+        </ul></div>
+    <?php endif; ?>
+</div>
+
+<script>
+function toggleInsertRow() {
+    const addMode = document.querySelector('input[name="mode"][value="add"]').checked;
+    document.getElementById('insert_position_row').style.display = addMode ? 'table-row' : 'none';
+}
+document.querySelectorAll('input[name="mode"]').forEach(radio => {
+    radio.addEventListener('change', toggleInsertRow);
+});
+toggleInsertRow();
+</script>
+
+<?php if ($running && $remaining > 0): ?>
+    <script>setTimeout(() => document.getElementById("form").submit(), 5000);</script>
+<?php endif;
 }
 
 function get_form_settings() {
@@ -242,7 +209,9 @@ function get_form_settings() {
         'batch_size' => isset($_POST['batch_size']) ? max(1, intval($_POST['batch_size'])) : 100,
         'image_title' => sanitize_text_field($_POST['image_title'] ?? ''),
         'mode' => $_POST['mode'] ?? 'add',
-        'order' => $_POST['order'] ?? 'ASC'
+        'order' => $_POST['order'] ?? 'ASC',
+        'insert_position' => $_POST['insert_position'] ?? 'end',
+        'custom_position' => isset($_POST['custom_position']) ? max(0, intval($_POST['custom_position']) - 1) : null
     ];
 }
 
@@ -251,6 +220,8 @@ function process_batch($settings) {
     $image_title = $settings['image_title'];
     $mode = $settings['mode'];
     $order = $settings['order'];
+    $position = $settings['insert_position'] ?? 'end';
+    $custom_index = $settings['custom_position'];
 
     $existing = get_page_by_title($image_title, OBJECT, 'attachment');
     if (!$existing) return "⚠️ Image '$image_title' not found.";
@@ -260,12 +231,12 @@ function process_batch($settings) {
     $offset = (int) get_option($offset_option, 0);
 
     $args = [
-        'post_type'      => 'product',
+        'post_type' => 'product',
         'posts_per_page' => $batch_size,
-        'offset'         => $offset,
-        'post_status'    => 'publish',
-        'orderby'        => 'ID',
-        'order'          => $order
+        'offset' => $offset,
+        'post_status' => 'publish',
+        'orderby' => 'ID',
+        'order' => $order
     ];
 
     $products = get_posts($args);
@@ -281,7 +252,13 @@ function process_batch($settings) {
         $gallery_array = $gallery ? explode(',', $gallery) : [];
 
         if ($mode === 'add' && !in_array($image_id, $gallery_array)) {
-            $gallery_array[] = $image_id;
+            if ($position === 'start') {
+                array_unshift($gallery_array, $image_id);
+            } elseif ($position === 'custom' && is_int($custom_index)) {
+                array_splice($gallery_array, $custom_index, 0, $image_id);
+            } else {
+                $gallery_array[] = $image_id;
+            }
             update_post_meta($product_id, '_product_image_gallery', implode(',', $gallery_array));
             $updated_count++;
         }
@@ -296,7 +273,7 @@ function process_batch($settings) {
     update_option($offset_option, $offset + $batch_size);
 
     $log = get_option('gallery_log', []);
-    $log[] = date('Y-m-d H:i:s') . " — $mode $updated_count products (from $offset to " . ($offset + $batch_size - 1) . ")";
+    $log[] = date('Y-m-d H:i:s') . " — $mode $updated_count products (from " . ($offset + 1) . " to " . ($offset + $batch_size) . ")";
     if (count($log) > 30) $log = array_slice($log, -30);
     update_option('gallery_log', $log);
 
