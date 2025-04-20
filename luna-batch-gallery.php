@@ -1,66 +1,66 @@
 <?php
 /**
- * Plugin Name: Luna Batch Image Inserter (Auto Enhanced UI)
+ * Plugin Name: Luna - Batch Image Inserter 
  * Description: Adds/removes an image to/from WooCommerce product galleries in batch, with manual/auto run, settings input, progress tracking, and animated UI.
- * Version: 2.2
+ * Version: 2.0
  * Author: Luna
  */
 
 add_action('admin_menu', function () {
     add_menu_page(
-        'Luna Image Inserter',
-        'Luna Image Inserter',
+        'Luna - Image Inserter',
+        'Luna - Image Inserter',
         'manage_woocommerce',
-        'luna-image-inserter',
-        'luna_image_inserter_page',
+        'image-inserter',
+        'image_inserter_page',
         'dashicons-format-image',
         26
     );
 });
 
-function luna_image_inserter_page() {
+function image_inserter_page() {
     $message = '';
 
-    if (isset($_POST['luna_run_once']) && check_admin_referer('luna_run_action_nonce')) {
-        $settings = luna_get_form_settings();
-        update_option('luna_last_settings', $settings);
-        $message = luna_process_batch($settings);
+    if (isset($_POST['run_once']) && check_admin_referer('run_action_nonce')) {
+        $settings = get_form_settings();
+        update_option('last_settings', $settings);
+        $message = process_batch($settings);
     }
 
-    if (isset($_POST['luna_run_auto']) && check_admin_referer('luna_run_action_nonce')) {
-        $settings = luna_get_form_settings();
-        update_option('luna_last_settings', $settings);
-        update_option('luna_auto_run_active', true);
-        update_option('luna_auto_run_started_at', time());
-        update_option('luna_auto_settings', $settings);
+    if (isset($_POST['run_auto']) && check_admin_referer('run_action_nonce')) {
+        $settings = get_form_settings();
+        update_option('last_settings', $settings);
+        update_option('auto_run_active', true);
+        update_option('auto_run_started_at', time());
+        update_option('auto_settings', $settings);
     }
 
-    if (isset($_POST['luna_stop_action']) && check_admin_referer('luna_stop_action_nonce')) {
-        update_option('luna_auto_run_active', false);
+    if (isset($_POST['stop_action']) && check_admin_referer('stop_action_nonce')) {
+        update_option('auto_run_active', false);
     }
 
-    if (isset($_POST['luna_reset_action']) && check_admin_referer('luna_reset_action_nonce')) {
-        delete_option('luna_gallery_offset');
-        delete_option('luna_gallery_log');
-        delete_option('luna_auto_run_active');
-        delete_option('luna_auto_run_started_at');
-        delete_option('luna_auto_settings');
-        delete_option('luna_last_settings');
+    if (isset($_POST['reset_action']) && check_admin_referer('reset_action_nonce')) {
+        delete_option('gallery_offset');
+        delete_option('gallery_log');
+        delete_option('auto_run_active');
+        delete_option('auto_run_started_at');
+        delete_option('auto_settings');
+        delete_option('last_settings');
         $message = 'Progress has been reset.';
     }
 
-    $offset = (int) get_option('luna_gallery_offset', 0);
+    $offset = (int) get_option('gallery_offset', 0);
     $total = (int) wp_count_posts('product')->publish;
     $remaining = max(0, $total - $offset);
     $progress = $total > 0 ? min(100, round(($offset / $total) * 100, 2)) : 0;
-    $running = get_option('luna_auto_run_active');
-    $started_at = get_option('luna_auto_run_started_at');
-    $auto_settings = get_option('luna_auto_settings');
-    $last = get_option('luna_last_settings', []);
-    $log = get_option('luna_gallery_log', []);
+    $running = get_option('auto_run_active');
+    $started_at = get_option('auto_run_started_at');
+    $auto_settings = get_option('auto_settings');
+    $last = get_option('last_settings', []);
+    $log = get_option('gallery_log', []);
 
     if ($running && $remaining > 0 && is_array($auto_settings)) {
-        $message = luna_process_batch($auto_settings);
+        $message = process_batch($auto_settings);
     }
     ?>
 
@@ -90,7 +90,7 @@ function luna_image_inserter_page() {
             padding: 6px 0;
             font-size: 15px;
         }
-        .luna-settings-highlight {
+        .settings-highlight {
             background: #eaf6ff;
             padding: 12px;
             border-left: 5px solid #2271b1;
@@ -119,7 +119,7 @@ function luna_image_inserter_page() {
             background: #e6ffed;
             border-left: 5px solid #46b450;
         }
-        .luna-log {
+        .log-box {
             max-height: 200px;
             overflow-y: auto;
             background: #f9f9f9;
@@ -147,7 +147,7 @@ function luna_image_inserter_page() {
     </style>
 
     <div class="wrap luna-container">
-        <h1>🖼️ Luna Batch Image Inserter</h1>
+        <h1>🖼️ Luna - Batch Image Inserter</h1>
 
         <h2>📊 Progress</h2>
         <div class="progress-bar">
@@ -162,7 +162,7 @@ function luna_image_inserter_page() {
         </ul>
 
         <?php if ($running && is_array($auto_settings)): ?>
-            <div class="luna-settings-highlight">
+            <div class="settings-highlight">
                 🔧 Current Settings → Mode: <?= esc_html($auto_settings['mode']) ?> |
                 Batch: <?= esc_html($auto_settings['batch_size']) ?> |
                 Order: <?= esc_html($auto_settings['order']) ?> |
@@ -170,48 +170,48 @@ function luna_image_inserter_page() {
             </div>
         <?php endif; ?>
 
-        <form method="post" id="luna-form" style="margin-bottom:20px; margin-top: 30px;">
-            <?php wp_nonce_field('luna_run_action_nonce'); ?>
+        <form method="post" id="form" style="margin-bottom:20px; margin-top: 30px;">
+            <?php wp_nonce_field('run_action_nonce'); ?>
             <table class="form-table">
                 <tr>
                     <th><label>Batch Size</label></th>
-                    <td><input type="number" name="luna_batch_size" value="<?= esc_attr($last['batch_size'] ?? 100) ?>"></td>
+                    <td><input type="number" name="batch_size" value="<?= esc_attr($last['batch_size'] ?? 100) ?>"></td>
                 </tr>
                 <tr>
                     <th><label>Image Title</label></th>
-                    <td><input type="text" name="luna_image_title" value="<?= esc_attr($last['image_title'] ?? '') ?>"></td>
+                    <td><input type="text" name="image_title" value="<?= esc_attr($last['image_title'] ?? '') ?>"></td>
                 </tr>
                 <tr>
                     <th>Mode</th>
                     <td>
-                        <label><input type="radio" name="luna_mode" value="add" <?= (!isset($last['mode']) || $last['mode'] === 'add') ? 'checked' : '' ?>> Add</label>
+                        <label><input type="radio" name="mode" value="add" <?= (!isset($last['mode']) || $last['mode'] === 'add') ? 'checked' : '' ?>> Add</label>
                         &nbsp;&nbsp;
-                        <label><input type="radio" name="luna_mode" value="remove" <?= ($last['mode'] ?? '') === 'remove' ? 'checked' : '' ?>> Remove</label>
+                        <label><input type="radio" name="mode" value="remove" <?= ($last['mode'] ?? '') === 'remove' ? 'checked' : '' ?>> Remove</label>
                     </td>
                 </tr>
                 <tr>
                     <th>Sort Order</th>
                     <td>
-                        <label><input type="radio" name="luna_order" value="ASC" <?= (!isset($last['order']) || $last['order'] === 'ASC') ? 'checked' : '' ?>> Oldest to Newest</label>
+                        <label><input type="radio" name="order" value="ASC" <?= (!isset($last['order']) || $last['order'] === 'ASC') ? 'checked' : '' ?>> Oldest to Newest</label>
                         &nbsp;&nbsp;
-                        <label><input type="radio" name="luna_order" value="DESC" <?= ($last['order'] ?? '') === 'DESC' ? 'checked' : '' ?>> Newest to Oldest</label>
+                        <label><input type="radio" name="order" value="DESC" <?= ($last['order'] ?? '') === 'DESC' ? 'checked' : '' ?>> Newest to Oldest</label>
                     </td>
                 </tr>
             </table>
             <p>
-                <input type="submit" name="luna_run_once" class="button button-primary" value="▶️ Run Once">
-                <input type="submit" name="luna_run_auto" class="button button-secondary" value="🔁 Start Auto Run Every 5s">
+                <input type="submit" name="run_once" class="button button-primary" value="▶️ Run Once">
+                <input type="submit" name="run_auto" class="button button-secondary" value="🔁 Start Auto Run Every 5s">
             </p>
         </form>
 
         <form method="post" style="display:inline-block; margin-right:10px;">
-            <?php wp_nonce_field('luna_stop_action_nonce'); ?>
-            <input type="submit" name="luna_stop_action" class="button" value="⏹️ Stop Auto Run">
+            <?php wp_nonce_field('stop_action_nonce'); ?>
+            <input type="submit" name="stop_action" class="button" value="⏹️ Stop Auto Run">
         </form>
 
         <form method="post" style="display:inline-block;">
-            <?php wp_nonce_field('luna_reset_action_nonce'); ?>
-            <input type="submit" name="luna_reset_action" class="button button-secondary" value="🔄 Reset Progress">
+            <?php wp_nonce_field('reset_action_nonce'); ?>
+            <input type="submit" name="reset_action" class="button button-secondary" value="🔄 Reset Progress">
         </form>
 
         <?php if ($message): ?>
@@ -220,7 +220,7 @@ function luna_image_inserter_page() {
 
         <?php if (!empty($log)): ?>
             <h2>📜 Log</h2>
-            <div class="luna-log">
+            <div class="log-box">
                 <ul>
                     <?php foreach ($log as $entry): ?>
                         <li><?= esc_html($entry) ?></li>
@@ -232,21 +232,21 @@ function luna_image_inserter_page() {
 
     <?php if ($running && $remaining > 0): ?>
         <script>
-            setTimeout(() => document.getElementById("luna-form").submit(), 5000);
+            setTimeout(() => document.getElementById("form").submit(), 5000);
         </script>
     <?php endif;
 }
 
-function luna_get_form_settings() {
+function get_form_settings() {
     return [
-        'batch_size' => isset($_POST['luna_batch_size']) ? max(1, intval($_POST['luna_batch_size'])) : 100,
-        'image_title' => sanitize_text_field($_POST['luna_image_title'] ?? ''),
-        'mode' => $_POST['luna_mode'] ?? 'add',
-        'order' => $_POST['luna_order'] ?? 'ASC'
+        'batch_size' => isset($_POST['batch_size']) ? max(1, intval($_POST['batch_size'])) : 100,
+        'image_title' => sanitize_text_field($_POST['image_title'] ?? ''),
+        'mode' => $_POST['mode'] ?? 'add',
+        'order' => $_POST['order'] ?? 'ASC'
     ];
 }
 
-function luna_process_batch($settings) {
+function process_batch($settings) {
     $batch_size = $settings['batch_size'];
     $image_title = $settings['image_title'];
     $mode = $settings['mode'];
@@ -256,7 +256,7 @@ function luna_process_batch($settings) {
     if (!$existing) return "⚠️ Image '$image_title' not found.";
 
     $image_id = $existing->ID;
-    $offset_option = 'luna_gallery_offset';
+    $offset_option = 'gallery_offset';
     $offset = (int) get_option($offset_option, 0);
 
     $args = [
@@ -270,7 +270,7 @@ function luna_process_batch($settings) {
 
     $products = get_posts($args);
     if (empty($products)) {
-        update_option('luna_auto_run_active', false);
+        update_option('auto_run_active', false);
         return '✅ No more products to update.';
     }
 
@@ -295,10 +295,10 @@ function luna_process_batch($settings) {
 
     update_option($offset_option, $offset + $batch_size);
 
-    $log = get_option('luna_gallery_log', []);
+    $log = get_option('gallery_log', []);
     $log[] = date('Y-m-d H:i:s') . " — $mode $updated_count products (from $offset to " . ($offset + $batch_size - 1) . ")";
     if (count($log) > 30) $log = array_slice($log, -30);
-    update_option('luna_gallery_log', $log);
+    update_option('gallery_log', $log);
 
     return "✅ $mode completed: $updated_count products processed.";
 }
