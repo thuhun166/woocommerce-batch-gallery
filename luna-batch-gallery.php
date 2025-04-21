@@ -1,8 +1,8 @@
 <?php
 /**
  * Plugin Name: Luna - Batch Image Inserter 
- * Description: Adds/removes an image to/from WooCommerce product galleries in batch, with manual/auto run, settings input, progress tracking, and animated UI.
- * Version: 2.2
+ * Description: Adds/removes an image to/from WooCommerce product galleries in batch, with manual/auto run, position control, and beautiful UI.
+ * Version: 2.3
  * Author: Luna
  */
 
@@ -49,8 +49,9 @@ function image_inserter_page() {
         $message = 'Progress has been reset.';
     }
 
+    $count = wp_count_posts('product');
+    $total = (int) $count->publish + (int) $count->private;
     $offset = (int) get_option('gallery_offset', 0);
-    $total = (int) wp_count_posts('product')->publish;
     $remaining = max(0, $total - $offset);
     $progress = $total > 0 ? min(100, round(($offset / $total) * 100, 2)) : 0;
     $running = get_option('auto_run_active');
@@ -101,6 +102,14 @@ function image_inserter_page() {
     text-align: center;
     font-size: 13px;
     line-height: 20px;
+}
+.log-box {
+    max-height: 200px;
+    overflow-y: auto;
+    background: #f9f9f9;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
 }
 </style>
 
@@ -153,8 +162,8 @@ function image_inserter_page() {
             <tr>
                 <th>Sort Order</th>
                 <td>
-                    <label><input type="radio" name="order" value="ASC" <?= (!isset($last['order']) || $last['order'] === 'ASC') ? 'checked' : '' ?>> ASC (Oldest to Newest)</label><br>
-                    <label><input type="radio" name="order" value="DESC" <?= ($last['order'] ?? '') === 'DESC' ? 'checked' : '' ?>> DESC (Newest to Oldest)</label>
+                    <label><input type="radio" name="order" value="ASC" <?= (!isset($last['order']) || $last['order'] === 'ASC') ? 'checked' : '' ?>> Oldest to Newest</label><br>
+                    <label><input type="radio" name="order" value="DESC" <?= ($last['order'] ?? '') === 'DESC' ? 'checked' : '' ?>> Newest to Oldest</label>
                 </td>
             </tr>
         </table>
@@ -234,7 +243,7 @@ function process_batch($settings) {
         'post_type' => 'product',
         'posts_per_page' => $batch_size,
         'offset' => $offset,
-        'post_status' => 'publish',
+        'post_status' => ['publish', 'private'],
         'orderby' => 'ID',
         'order' => $order
     ];
@@ -261,12 +270,18 @@ function process_batch($settings) {
             }
             update_post_meta($product_id, '_product_image_gallery', implode(',', $gallery_array));
             $updated_count++;
+
+            do_action('save_post', $product_id, get_post($product_id), true);
+            do_action('woocommerce_update_product', $product_id);
         }
 
         if ($mode === 'remove' && in_array($image_id, $gallery_array)) {
             $gallery_array = array_filter($gallery_array, fn($id) => $id != $image_id);
             update_post_meta($product_id, '_product_image_gallery', implode(',', $gallery_array));
             $updated_count++;
+
+            do_action('save_post', $product_id, get_post($product_id), true);
+            do_action('woocommerce_update_product', $product_id);
         }
     }
 
@@ -279,3 +294,4 @@ function process_batch($settings) {
 
     return "✅ $mode completed: $updated_count products processed.";
 }
+?>
